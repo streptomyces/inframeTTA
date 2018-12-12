@@ -1,11 +1,105 @@
 # use 5.14.0;
 use strict;
 use Bio::SeqIO;
+use Carp;
 
+# {{{ Getopt::Long
+use Getopt::Long;
+my $outfile;
+my $fnafn;
+my $faafn;
+my $help;
+GetOptions (
+"outfile:s" => \$outfile,
+"fnafn|ntfas:s" => \$fnafn,
+"faafn|protfas:s" => \$faafn,
+"help" => \$help
+);
+# }}}
+
+if($help) {
+exec("perldoc $0");
+exit;
+}
+
+# {{{ POD
+
+=head1 Name
+
+inframeTTA.pl
+
+=head2 Examples
+
+ perl code/inframeTTA.pl -out sco_plasmids_tta.txt -fnafn sco_plasmids_tta.fna \
+ -faafn sco_plasmids_tta.faa sco_plasmids.gbk 
+
+ perl code/inframeTTA.pl -out sco_plasmids_tta.txt -ntfas sco_plasmids_tta.fna \
+ -protfas sco_plasmids_tta.faa sco_plasmids.gbk 
+
+ perl code/inframeTTA.pl -ntfas sco_plasmids_tta.fna \
+ -protfas sco_plasmids_tta.faa sco_plasmids.gbk 
+
+ perl code/inframeTTA.pl -outfile sco_plasmids_tta.txt \
+ -ntfas sco_plasmids_tta.fna sco_plasmids.gbk 
+
+=head2 Options
+
+=over 2
+
+=item
+
+-outfile: File name to which tabular (tab delimited) output is written.
+
+=item
+
+-fnafn|-ntfas: File name to which the nucleotide sequences of the TTA
+containing genes are written in the fasta format.
+
+=item
+
+-faafn|-protfas: File name to which the protein sequences of the TTA containing
+genes are written in the fasta format.
+
+=item 
+
+Any remaining arguments after the above options are considered to be input
+filenames to be processed.
+
+=back
+
+=head2 Notes
+
+If the outfile is not specified tabular output is written to STDOUT (terminal).
+
+If the nucleotides output file is not specified the nucleotide sequences of the
+TTA containing genes found are not saved anywhere.
+
+If the proteins output file is not specified the protein sequences of the
+TTA containing genes found are not saved anywhere.
+
+=cut
+
+# }}}
+
+# Command line arguments not eaten up by Getopt::Long above are
+# considered to be input file names.
 my @infiles = @ARGV;
+unless(@infiles) {
+  croak("No input files provided. Nothing to do. Exiting");
+}
 
-my $fnafn = "out.fna";
-my $faafn = "out.faa";
+
+# {{{ The output filehandle. Default to STDOUT.
+my $ofh;
+if($outfile) {
+  open($ofh, ">", $outfile);
+}
+else {
+  open($ofh, ">&STDOUT");
+}
+select($ofh);
+# }}}
+
 
 # fasta output for nucleotide sequences
 my $ntout;
@@ -44,11 +138,13 @@ for my $infile (@infiles) {
           if($ntout) {
             my $featobj=$feature->spliced_seq(-nosort => 1);
             $featobj->display_id($id);
+            $featobj->description($product);
             $ntout->write_seq($featobj);
           }
           if($aaout) {
             my $aaobj = featTranslate($feature);
             $aaobj->display_id($id);
+            $aaobj->description($product);
             $aaout->write_seq($aaobj);
           }
         }
@@ -57,6 +153,12 @@ for my $infile (@infiles) {
   }
 }
 
+# Multiple END blocks run in reverse order of definition.
+END {
+  if($ofh) {
+    close($ofh);
+  }
+}
 exit;
 
 
@@ -89,7 +191,7 @@ sub idAndProd {
   }
   my $pproduct;
   if(exists($anno{product})) { $pproduct = join(" ", @{$anno{product}}); }
-  else { $pproduct = "None"; }
+  else { $pproduct = "No annotated product"; }
   return($id, $pproduct);
 }
 # }}}
