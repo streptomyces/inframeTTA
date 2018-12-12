@@ -28,7 +28,7 @@
 # !*.pod
 # !*.[rR]
 
-
+commands.md
 test_*
 .*sw[op]
 

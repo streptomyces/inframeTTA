@@ -50,5 +50,8 @@ Govind
 
 zip -j -r ~/mnt/wstemp/natasha/ttaScriptAndTestInput code/inframeTTA.pl sco_plasmids.gbk
 
+    git remote add origin git@github.com:streptomyces/inframeTTA.git
+    git push -u origin master
+
 ~~~
 
