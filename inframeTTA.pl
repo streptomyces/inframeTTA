@@ -30,16 +30,18 @@ inframeTTA.pl
 
 =head2 Examples
 
- perl code/inframeTTA.pl -out sco_plasmids_tta.txt -fnafn sco_plasmids_tta.fna \
+ perl inframeTTA.pl -help
+
+ perl inframeTTA.pl -out sco_plasmids_tta.txt -fnafn sco_plasmids_tta.fna \
  -faafn sco_plasmids_tta.faa sco_plasmids.gbk 
 
- perl code/inframeTTA.pl -out sco_plasmids_tta.txt -ntfas sco_plasmids_tta.fna \
+ perl inframeTTA.pl -out sco_plasmids_tta.txt -ntfas sco_plasmids_tta.fna \
  -protfas sco_plasmids_tta.faa sco_plasmids.gbk 
 
- perl code/inframeTTA.pl -ntfas sco_plasmids_tta.fna \
+ perl inframeTTA.pl -ntfas sco_plasmids_tta.fna \
  -protfas sco_plasmids_tta.faa sco_plasmids.gbk 
 
- perl code/inframeTTA.pl -outfile sco_plasmids_tta.txt \
+ perl inframeTTA.pl -outfile sco_plasmids_tta.txt \
  -ntfas sco_plasmids_tta.fna sco_plasmids.gbk 
 
 =head2 Options
@@ -163,9 +165,33 @@ exit;
 
 
 ### subroutines below ###
+=head1 Subroutines
+
+=cut
 
 # {{{ sub idAndProd
-# Returns two strings.
+
+=head2 sub idAndProd
+
+=head3 Arguments
+
+=over 2
+
+=item 1.
+A sequence feature object.
+
+=item 2.
+A number. This is used to generate an identifier if the feature does not
+contain any tag which might be used as an identifier.
+
+=back
+
+=head3 Returns
+
+Returns two strings.
+
+=cut
+
 sub idAndProd {
   my $feature = shift(@_);
   my $cdsCnt = shift(@_);
@@ -198,7 +224,28 @@ sub idAndProd {
 
 
 # {{{ sub inframeTTA
-# Returns a list of (zero based) nucleotide positions.
+
+=head2 sub inframeTTA
+
+=head3 Arguments
+
+=over 2
+
+=item 1.
+A nucleotide sequence string or a Bio::Seq object.
+
+=item 2.
+An offset (integer) to start looking at triplets from. Zero to start
+looking from the first nucleotide.
+
+=back
+
+=head3 Returns
+
+Returns a list of (zero based) nucleotide positions.
+
+=cut
+
 sub inframeTTA {
   my $inseq=shift(@_);
   my $offset = shift(@_);
@@ -220,7 +267,24 @@ sub inframeTTA {
 
 
 # {{{ sub featTranslate
-# Returns a Bio::Seq
+
+=head2 sub featTranslate
+
+=head3 Arguments
+
+=over 2
+
+=item 1.
+A sequence feature object.
+
+=back
+
+=head3 Returns
+
+Returns a Bio::Seq (protein) object.
+
+=cut
+
 sub featTranslate {
   my $feature=shift(@_);
   my $codon_start=1;
@@ -235,3 +299,11 @@ sub featTranslate {
   return($aaobj);
 }
 # }}}
+
+
+=head1 Author
+
+Govind Chandra E<lt>govind.chandra@jic.ac.ukE<gt>
+
+=cut
+
