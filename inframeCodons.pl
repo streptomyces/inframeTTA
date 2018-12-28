@@ -56,13 +56,19 @@ inframeCodons.pl
 
 =item
 
--fnafn|-ntfas: File name to which the nucleotide sequences of the TTA
-containing genes are written in the fasta format.
+-fnafn|-ntfas: File name to which the nucleotide sequences of the genes
+containing the codons are written in the fasta format.
 
 =item
 
--faafn|-protfas: File name to which the protein sequences of the TTA containing
-genes are written in the fasta format.
+-faafn|-prottfas: File name to which the protein sequences of the genes
+containing the codons are written in the fasta format.
+
+=item
+
+-codons: Codons to look for and report. Comma separated. e.g.
+
+ -codons tta,gtg,ttg
 
 =item 
 
@@ -105,7 +111,17 @@ select($ofh);
 # }}}
 
 
-my @codons = split(/(,|\s)+/, $glcodons);
+my @temp = split(/(,|\s)+/, $glcodons);
+my @codons;
+for my $cod (@temp) {
+if($cod =~ m/[^acgtu]/i or length($cod) != 3) {
+} else {
+push(@codons, $cod);
+}
+}
+
+
+
 
 # fasta output for nucleotide sequences
 my $ntout;
@@ -137,10 +153,15 @@ for my $infile (@infiles) {
         my $offset = 0;
         if($codon_start > 1) { $offset += $codon_start - 1; }
         my $subobj = $feature->spliced_seq(-nosort => 1);
-        my @ttapos = inframeCodons($subobj, $offset);
-        if(@ttapos) {
+        my %codpos = inframeCodons($subobj, $offset);
+        my @keycod = keys(%codpos);
+        my @valcod = values(%codpos);
+        my @positions;
+        for my $lr (@valcod) { push(@positions, @{$lr}); }
+        if(@keycod) {
           my ($id, $product) = idAndProd($feature, $cdsCnt);
-          print(join("\t", $id, join(" ", @ttapos), $product), "\n");
+          print(join("\t", $id, join(" ", @keycod), join(" ", @positions),
+          $product), "\n");
           if($ntout) {
             my $featobj=$feature->spliced_seq(-nosort => 1);
             $featobj->display_id($id);
