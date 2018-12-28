@@ -34,17 +34,17 @@ inframeCodons.pl
 
  perl inframeCodons.pl -help
 
- perl inframeCodons.pl -out sco_plasmids_tta.txt -fnafn sco_plasmids_tta.fna \
- -faafn sco_plasmids_tta.faa sco_plasmids.gbk 
+ perl inframeCodons.pl -codons tta,ttt -out sco_plasmids_codons.txt -fnafn sco_plasmids_codons.fna \
+ -faafn sco_plasmids_codons.faa sco_plasmids.gbk 
 
- perl inframeCodons.pl -out sco_plasmids_tta.txt -ntfas sco_plasmids_tta.fna \
- -protfas sco_plasmids_tta.faa sco_plasmids.gbk 
+ perl inframeCodons.pl -codons tta,ttt -out sco_plasmids_codons.txt -ntfas sco_plasmids_codons.fna \
+ -protfas sco_plasmids_codons.faa sco_plasmids.gbk 
 
- perl inframeCodons.pl -ntfas sco_plasmids_tta.fna \
- -protfas sco_plasmids_tta.faa sco_plasmids.gbk 
+ perl inframeCodons.pl -codons tta,ttt -ntfas sco_plasmids_codons.fna \
+ -protfas sco_plasmids_codons.faa sco_plasmids.gbk 
 
- perl inframeCodons.pl -outfile sco_plasmids_tta.txt \
- -ntfas sco_plasmids_tta.fna sco_plasmids.gbk 
+ perl inframeCodons.pl -codons tta,ttt,ctt -outfile sco_plasmids_codons.txt \
+ -ntfas sco_plasmids_codons.fna sco_plasmids.gbk 
 
 =head2 Options
 
@@ -66,9 +66,13 @@ containing the codons are written in the fasta format.
 
 =item
 
--codons: Codons to look for and report. Comma separated. e.g.
+-codons: Codons to look for and report. Comma separated. No spaces
+in the argument. See example below.
 
- -codons tta,gtg,ttg
+ -codons tta,ttt,ctt
+
+If no codons are specified then TTA is searched for.
+
 
 =item 
 
@@ -78,6 +82,9 @@ filenames to be processed.
 =back
 
 =head2 Notes
+
+The number of columns in the tabular output depends upon the number of codons
+searched.
 
 If the outfile is not specified tabular output is written to STDOUT (terminal).
 
@@ -155,23 +162,31 @@ for my $infile (@infiles) {
         my $subobj = $feature->spliced_seq(-nosort => 1);
         my %codpos = inframeCodons($subobj, $offset);
         my @keycod = keys(%codpos);
-        my @valcod = values(%codpos);
-        my @positions;
-        for my $lr (@valcod) { push(@positions, @{$lr}); }
         if(@keycod) {
+          my @outlist;
           my ($id, $product) = idAndProd($feature, $cdsCnt);
-          print(join("\t", $id, join(" ", @keycod), join(" ", @positions),
-          $product), "\n");
+          push(@outlist, $id);
+          for my $codon (@codons) {
+            if(exists($codpos{$codon})) {
+              push(@outlist, $codon, join(",", @{$codpos{$codon}}) );
+            }
+            else {
+              push(@outlist, $codon, "-");
+            }
+          }
+          push(@outlist, $product);
+          print(join("\t", @outlist), "\n");
+          my @outdesc = @outlist[1..$#outlist];
           if($ntout) {
             my $featobj=$feature->spliced_seq(-nosort => 1);
             $featobj->display_id($id);
-            $featobj->description($product);
+            $featobj->description(join(" ", @outdesc));
             $ntout->write_seq($featobj);
           }
           if($aaout) {
             my $aaobj = featTranslate($feature);
             $aaobj->display_id($id);
-            $aaobj->description($product);
+            $aaobj->description(join(" ", @outdesc));
             $aaout->write_seq($aaobj);
           }
         }
