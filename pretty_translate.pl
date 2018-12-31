@@ -28,6 +28,20 @@ exit;
 
 pretty_translate.pl
 
+=head2 Description
+
+Translates the nucleotide sequences in the given fasta files and the
+prints out both the nucleotide and amino acid sequences so that it is
+easy to see which amino acid is coming from which codon. See below for
+an example output.
+
+ >SCP1.11c tta - ttt 15,288,318 hypothetical protein
+ TTGATTCCCTCGGGCTTTTCCCTCAAGGGCGGTGTCAGTCCGATACGTCAGCATGACCGT
+ L  I  P  S  G  F  S  L  K  G  G  V  S  P  I  R  Q  H  D  R
+ 
+ CGGGAACGACATGCCGCCCTGGAGGTCGCCATGCGCAAGCCACACGATCCTCACGAGCAG
+ R  E  R  H  A  A  L  E  V  A  M  R  K  P  H  D  P  H  E  Q
+
 =head2 Examples
 
  perl pretty_translate.pl sco_plasmids_codons.fna

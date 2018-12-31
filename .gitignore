@@ -29,6 +29,6 @@
 # !*.[rR]
 
 commands.md
-test_*
+test*
 .*sw[op]
 

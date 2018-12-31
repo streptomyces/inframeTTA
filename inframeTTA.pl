@@ -28,6 +28,18 @@ exit;
 
 inframeTTA.pl
 
+=head2 Description
+
+A simple Perl script to find genes containing inframe TTA codons in
+them. TTA recognizing tRNA plays a regulatory role in the life cycle
+of (at least some) I<Streptomyces> species. This role was first
+discovered in I<Streptomyces coelicolor>. It is often of interest to
+look for TTA containing genes in newly sequenced I<Streptomyces>
+genomes, and possibly in other high GC bacterial genomes.
+
+The input to this script is a Genbank (or EMBL) file. It looks for TTA
+codons in all features with the primary tag of CDS.
+
 =head2 Examples
 
  perl inframeTTA.pl -help

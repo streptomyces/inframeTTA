@@ -2,6 +2,9 @@
 use strict;
 use Bio::SeqIO;
 use Carp;
+use File::Basename;
+use File::Spec;
+use File::Path qw(make_path remove_tree);
 
 # {{{ Getopt::Long
 use Getopt::Long;
@@ -30,21 +33,56 @@ exit;
 
 inframeCodons.pl
 
+=head2 Description
+
+Look for codons in CDSs in genbank files.
+
 =head2 Examples
 
  perl inframeCodons.pl -help
 
- perl inframeCodons.pl -codons tta,ttt -out sco_plasmids_codons.txt -fnafn sco_plasmids_codons.fna \
- -faafn sco_plasmids_codons.faa sco_plasmids.gbk 
+ perl inframeCodons.pl -codons tta,ttt -out sco_plasmids_codons.txt \
+ -fnafn sco_plasmids_codons.fna -faafn sco_plasmids_codons.faa sco_plasmids.gbk 
 
- perl inframeCodons.pl -codons tta,ttt -out sco_plasmids_codons.txt -ntfas sco_plasmids_codons.fna \
- -protfas sco_plasmids_codons.faa sco_plasmids.gbk 
+ perl inframeCodons.pl -codons tta,ttt -out sco_plasmids_codons.txt \
+ -ntfas sco_plasmids_codons.fna -protfas sco_plasmids_codons.faa sco_plasmids.gbk 
 
  perl inframeCodons.pl -codons tta,ttt -ntfas sco_plasmids_codons.fna \
  -protfas sco_plasmids_codons.faa sco_plasmids.gbk 
 
  perl inframeCodons.pl -codons tta,ttt,ctt -outfile sco_plasmids_codons.txt \
  -ntfas sco_plasmids_codons.fna sco_plasmids.gbk 
+
+
+=head2 Notes
+
+The number of columns in the tabular output depends upon the number of codons
+searched.
+
+If the outfile is not specified tabular output is written to STDOUT (terminal).
+
+If the nucleotides output file is not specified the nucleotide sequences of the
+TTA containing genes found are not saved anywhere.
+
+If the proteins output file is not specified the protein sequences of the
+TTA containing genes found are not saved anywhere.
+
+=head3 Output file names
+
+Protein and nucleotide fasta output file names are generated using the output
+filenames provided and the list of codons to search. For example, if the
+options used are
+
+ -codons ttt,tta,ctt -fnafn directory/out.fna
+
+then the three file names generated are
+
+ directory/out_TTT.fna
+ directory/out_TTA.fna
+ directory/out_CTT.fna
+
+If the directory path in the output file name does not already exist then an
+attempt will be made to make it. Failure of this attempt will stop the script.
 
 =head2 Options
 
@@ -81,18 +119,6 @@ filenames to be processed.
 
 =back
 
-=head2 Notes
-
-The number of columns in the tabular output depends upon the number of codons
-searched.
-
-If the outfile is not specified tabular output is written to STDOUT (terminal).
-
-If the nucleotides output file is not specified the nucleotide sequences of the
-TTA containing genes found are not saved anywhere.
-
-If the proteins output file is not specified the protein sequences of the
-TTA containing genes found are not saved anywhere.
 
 =cut
 
@@ -109,6 +135,12 @@ unless(@infiles) {
 # {{{ The output filehandle. Default to STDOUT.
 my $ofh;
 if($outfile) {
+  my ($noex, $dir, $ext)= fileparse($outfile, qr/\.[^.]*/);
+  if($dir) {
+    unless(-d $dir) {
+      make_path($dir); # croaks or carps anyway. Hence no checks.
+    }
+  }
   open($ofh, ">", $outfile);
 }
 else {
@@ -118,33 +150,54 @@ select($ofh);
 # }}}
 
 
+# {{{ Build @codons
 my @temp = split(/(,|\s)+/, $glcodons);
 my @codons;
 for my $cod (@temp) {
-if($cod =~ m/[^acgtu]/i or length($cod) != 3) {
-} else {
-push(@codons, $cod);
+  if($cod =~ m/[^acgtu]/i or length($cod) != 3) {
+  } else {
+    $cod = uc($cod);
+    $cod =~ s/U/T/g;
+    push(@codons, $cod);
+  }
 }
-}
+# }}}
 
-
-
-
+# {{{ Hashes of filehandles and Bio::SeqIO objects for each codon
+# for nucleotide and protein fasta output.
 # fasta output for nucleotide sequences
-my $ntout;
+my %ntfh;
+my %ntout;
 if($fnafn) {
-  $ntout = Bio::SeqIO->new(-file => ">$fnafn", -format => "fasta");
+  my ($noex, $dir, $ext)= fileparse($fnafn, qr/\.[^.]*/);
+  unless(-d $dir) {
+    make_path($dir); # croaks or carps anyway. Hence no checks.
+  }
+  for my $cod (@codons) {
+    my $codfnafn = File::Spec->catfile($dir, $noex . "_" . $cod . $ext);
+    open($ntfh{$cod}, ">", $codfnafn); 
+    $ntout{$cod} = Bio::SeqIO->new(-fh => $ntfh{$cod}, -format => "fasta");
+  }
 }
 
 # fasta output for protein sequences
-my $aaout;
+my %protfh;
+my %protout;
 if($faafn) {
-  $aaout = Bio::SeqIO->new(-file => ">$faafn", -format => "fasta");
+  my ($noex, $dir, $ext)= fileparse($faafn, qr/\.[^.]*/);
+  unless(-d $dir) {
+    make_path($dir); # croaks or carps anyway. Hence no checks.
+  }
+  for my $cod (@codons) {
+    my $codfaafn = File::Spec->catfile($dir, $noex . "_" . $cod . $ext);
+    open($protfh{$cod}, ">", $codfaafn); 
+    $protout{$cod} = Bio::SeqIO->new(-fh => $protfh{$cod}, -format => "fasta");
+  }
 }
+# }}}
 
-
-# Loop through all CDSs inside each sequence object inside each genbank file.
-# A single genbank file can have multiple sequences in it.
+# {{{ Loop through all CDSs inside each sequence object inside each genbank
+# file. A single genbank file can have multiple sequences in it.
 
 for my $infile (@infiles) {
   my $seqio=Bio::SeqIO->new(-file => $infile);
@@ -177,31 +230,49 @@ for my $infile (@infiles) {
           push(@outlist, $product);
           print(join("\t", @outlist), "\n");
           my @outdesc = @outlist[1..$#outlist];
-          if($ntout) {
+
+          if(%ntout) {
             my $featobj=$feature->spliced_seq(-nosort => 1);
             $featobj->display_id($id);
-            $featobj->description(join(" ", @outdesc));
-            $ntout->write_seq($featobj);
+            for my $cod (@keycod) {
+              $featobj->description("$cod at: " . join(" ", @{$codpos{$cod}}) . ". " . $product);
+              $ntout{$cod}->write_seq($featobj);
+            }
+
           }
-          if($aaout) {
+          if(%protout) {
             my $aaobj = featTranslate($feature);
             $aaobj->display_id($id);
-            $aaobj->description(join(" ", @outdesc));
-            $aaout->write_seq($aaobj);
+            for my $cod (@keycod) {
+              $aaobj->description("$cod at: " . join(" ", @{$codpos{$cod}}) . ". " . $product);
+              $protout{$cod}->write_seq($aaobj);
+            }
           }
+        
         }
       }
     }
   }
 }
+# }}}
 
-# Multiple END blocks run in reverse order of definition.
+exit;
+
+
+# {{{ Multiple END blocks run in reverse order of definition.
 END {
   if($ofh) {
     close($ofh);
   }
+  for my $cod (keys %ntfh) {
+    close($ntfh{$cod});
+  }
+  for my $cod (keys %protfh) {
+    close($protfh{$cod});
+  }
 }
-exit;
+
+# }}}
 
 
 ### subroutines below ###

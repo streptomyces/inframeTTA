@@ -63,10 +63,86 @@ TTA containing genes found are not saved anywhere.
 If the proteins output file is not specified the protein sequences of the
 TTA containing genes found are not saved anywhere.
 
+# inframeCodons.pl
+
+### Examples
+
+     perl inframeCodons.pl -help
+
+     perl inframeCodons.pl -codons tta,ttt -out sco_plasmids_codons.txt -fnafn sco_
+     -faafn sco_plasmids_codons.faa sco_plasmids.gbk 
+
+     perl inframeCodons.pl -codons tta,ttt -out sco_plasmids_codons.txt -ntfas sco_
+     -protfas sco_plasmids_codons.faa sco_plasmids.gbk 
+
+     perl inframeCodons.pl -codons tta,ttt -ntfas sco_plasmids_codons.fna \
+     -protfas sco_plasmids_codons.faa sco_plasmids.gbk 
+
+     perl inframeCodons.pl -codons tta,ttt,ctt -outfile sco_plasmids_codons.txt \
+     -ntfas sco_plasmids_codons.fna sco_plasmids.gbk
+
+### Options
+
+* -outfile: File name to which tabular (tab delimited) output is written.
+
+* -fnafn|-ntfas: File name to which the nucleotide sequences of the genes
+  containing the codons are written in the fasta format.
+
+* -faafn|-protfas: File name to which the protein sequences of the genes
+  containing the codons are written in the fasta format.
+
+* -codons: Codons to look for and report. Comma separated. No spaces in
+  the argument. For example `-codons tta,ttt,ctt`. If no codons are specified
+  then TTA is searched for.
+
+* Any remaining arguments after the above options are considered to be
+  input filenames to be processed.
+
+### Notes
+
+The number of columns in the tabular output depends upon the number of
+codons searched.
+
+If the outfile is not specified tabular output is written to STDOUT
+(terminal).
+
+If the nucleotides output file is not specified the nucleotide sequences
+of the TTA containing genes found are not saved anywhere.
+
+If the proteins output file is not specified the protein sequences of the
+TTA containing genes found are not saved anywhere.
+
+# pretty_translate.pl
+
+### Examples
+
+     perl pretty_translate.pl sco_plasmids_codons.fna
+ 
+     perl pretty_translate.pl -outfile sco_plasmids_codons_pretty.txt \
+     sco_plasmids_codons.fna
+ 
+     perl pretty_translate.pl -frame 2 sco_plasmids_codons.fna
+ 
+     perl pretty_translate.pl -strand -1 -frame 2 sco_plasmids_codons.fna
+
+# Options
+
+* -strand: 1 or -1. -1 will revcom before translating. Defaults to 1
+
+* -frame: 0 or 1 or 2. Reading frame to translate. Defaults to 0.
+
+* -outfile: If specified, output is written to this file. Otherwise to
+  STDOUT.
+
+* Remaining non-option arguments are considered to be fasta file names to
+  be translated.
+
+
+
 ### Dependencies
 
-This script depends on [BioPerl](https://bioperl.org) being installed
-and available. It only needs Bio::SeqIO (and whatever it depends upon)
+These scripts depend on [BioPerl](https://bioperl.org) being installed
+and available. They only need Bio::SeqIO (and whatever it depends upon)
 to work.
 
 ### Author
