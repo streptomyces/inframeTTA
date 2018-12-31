@@ -41,45 +41,51 @@ Look for codons in CDSs in genbank files.
 
  perl inframeCodons.pl -help
 
- perl inframeCodons.pl -codons tta,ttt -out sco_plasmids_codons.txt \
- -fnafn sco_plasmids_codons.fna -faafn sco_plasmids_codons.faa sco_plasmids.gbk 
+ perl inframeCodons.pl -codons tta,ttt -out sco_plasmids.txt \
+ -fnafn sco_plasmids.fna -faafn sco_plasmids.faa sco_plasmids.gbk 
 
- perl inframeCodons.pl -codons tta,ttt -out sco_plasmids_codons.txt \
- -ntfas sco_plasmids_codons.fna -protfas sco_plasmids_codons.faa sco_plasmids.gbk 
+ perl inframeCodons.pl -codons tta,ttt -out sco_plasmids.txt \
+ -ntfas sco_plasmids.fna -protfas sco_plasmids.faa sco_plasmids.gbk 
 
- perl inframeCodons.pl -codons tta,ttt -ntfas sco_plasmids_codons.fna \
- -protfas sco_plasmids_codons.faa sco_plasmids.gbk 
+ perl inframeCodons.pl -codons tta,ttt -ntfas sco_plasmids.fna \
+ -protfas sco_plasmids.faa sco_plasmids.gbk 
 
- perl inframeCodons.pl -codons tta,ttt,ctt -outfile sco_plasmids_codons.txt \
- -ntfas sco_plasmids_codons.fna sco_plasmids.gbk 
+ perl inframeCodons.pl -codons tta,ttt,ctt -outfile sco_plasmids.txt \
+ -ntfas sco_plasmids.fna sco_plasmids.gbk 
 
+ perl code/inframeCodons.pl -codons tta,ttt -out outdir/sco_plasmids.txt \
+ -fnafn outdir/sco_plasmids.fna -faafn outdir/sco_plasmids.faa \
+ sco_plasmids.gbk 
 
 =head2 Notes
 
-The number of columns in the tabular output depends upon the number of codons
-searched.
-
-If the outfile is not specified tabular output is written to STDOUT (terminal).
+The number of columns in the tabular output written to STDOUT depends upon the
+number of codons searched. This information is also in the per codon tabular
+output files so this output can be safely ignored. It is just to give you
+something to watch while the script is working.
 
 If the nucleotides output file is not specified the nucleotide sequences of the
-TTA containing genes found are not saved anywhere.
+codon containing genes found are not saved anywhere.
 
 If the proteins output file is not specified the protein sequences of the
-TTA containing genes found are not saved anywhere.
+codon containing genes found are not saved anywhere.
 
 =head3 Output file names
 
-Protein and nucleotide fasta output file names are generated using the output
-filenames provided and the list of codons to search. For example, if the
-options used are
+Tabular, protein and, nucleotide fasta output file names are generated using
+the output filenames provided and the list of codons to search. For example, if
+the options used are
 
- -codons ttt,tta,ctt -fnafn directory/out.fna
+ -codons ttt,tta,ctt -fnafn directory/out.fna -outfile directory/out.txt
 
 then the three file names generated are
 
  directory/out_TTT.fna
  directory/out_TTA.fna
  directory/out_CTT.fna
+ directory/out_TTT.txt
+ directory/out_TTA.txt
+ directory/out_CTT.txt
 
 If the directory path in the output file name does not already exist then an
 attempt will be made to make it. Failure of this attempt will stop the script.
@@ -91,16 +97,19 @@ attempt will be made to make it. Failure of this attempt will stop the script.
 =item
 
 -outfile: File name to which tabular (tab delimited) output is written.
+See B<output file names> above.
 
 =item
 
 -fnafn|-ntfas: File name to which the nucleotide sequences of the genes
 containing the codons are written in the fasta format.
+See B<output file names> above.
 
 =item
 
 -faafn|-prottfas: File name to which the protein sequences of the genes
 containing the codons are written in the fasta format.
+See B<output file names> above.
 
 =item
 
@@ -109,7 +118,10 @@ in the argument. See example below.
 
  -codons tta,ttt,ctt
 
-If no codons are specified then TTA is searched for.
+If no codons are specified then TTA is searched for. All specified codons are
+converted to upper case without any warning. All occurrences of I<U> in codons
+are converted to I<T> without warning. Codons containing anything other than
+a,c,g,t,u are dropped as are codons not exactly three characters long.
 
 
 =item 
@@ -131,25 +143,6 @@ unless(@infiles) {
   croak("No input files provided. Nothing to do. Exiting");
 }
 
-
-# {{{ The output filehandle. Default to STDOUT.
-my $ofh;
-if($outfile) {
-  my ($noex, $dir, $ext)= fileparse($outfile, qr/\.[^.]*/);
-  if($dir) {
-    unless(-d $dir) {
-      make_path($dir); # croaks or carps anyway. Hence no checks.
-    }
-  }
-  open($ofh, ">", $outfile);
-}
-else {
-  open($ofh, ">&STDOUT");
-}
-select($ofh);
-# }}}
-
-
 # {{{ Build @codons
 my @temp = split(/(,|\s)+/, $glcodons);
 my @codons;
@@ -163,6 +156,24 @@ for my $cod (@temp) {
 }
 # }}}
 
+# {{{ The output filehandle. Default to STDOUT.
+my %ofh;
+if($outfile) {
+  my ($noex, $dir, $ext)= fileparse($outfile, qr/\.[^.]*/);
+  if($dir) {
+    unless(-d $dir) {
+      make_path($dir); # croaks or carps anyway. Hence no checks.
+    }
+  }
+  for my $cod (@codons) {
+    my $codoutfn = File::Spec->catfile($dir, $noex . "_" . $cod . $ext);
+    open($ofh{$cod}, ">", $codoutfn);
+  }
+}
+# }}}
+
+
+
 # {{{ Hashes of filehandles and Bio::SeqIO objects for each codon
 # for nucleotide and protein fasta output.
 # fasta output for nucleotide sequences
@@ -170,8 +181,10 @@ my %ntfh;
 my %ntout;
 if($fnafn) {
   my ($noex, $dir, $ext)= fileparse($fnafn, qr/\.[^.]*/);
+  if($dir) {
   unless(-d $dir) {
     make_path($dir); # croaks or carps anyway. Hence no checks.
+  }
   }
   for my $cod (@codons) {
     my $codfnafn = File::Spec->catfile($dir, $noex . "_" . $cod . $ext);
@@ -185,8 +198,10 @@ my %protfh;
 my %protout;
 if($faafn) {
   my ($noex, $dir, $ext)= fileparse($faafn, qr/\.[^.]*/);
+  if($dir) {
   unless(-d $dir) {
     make_path($dir); # croaks or carps anyway. Hence no checks.
+  }
   }
   for my $cod (@codons) {
     my $codfaafn = File::Spec->catfile($dir, $noex . "_" . $cod . $ext);
@@ -215,6 +230,8 @@ for my $infile (@infiles) {
         my $subobj = $feature->spliced_seq(-nosort => 1);
         my %codpos = inframeCodons($subobj, $offset);
         my @keycod = keys(%codpos);
+
+# {{{ if @keycod
         if(@keycod) {
           my @outlist;
           my ($id, $product) = idAndProd($feature, $cdsCnt);
@@ -228,9 +245,20 @@ for my $infile (@infiles) {
             }
           }
           push(@outlist, $product);
-          print(join("\t", @outlist), "\n");
-          my @outdesc = @outlist[1..$#outlist];
-
+          print(join("\t", @outlist), "\n"); # Always to STDOUT. Rather pointless.
+# Tabular output to codon derived file names.
+            if(%ofh) {
+              for my $cod (@keycod) {
+                my @outlist = ($id);
+                push(@outlist, $cod, join(",", @{$codpos{$cod}}) );
+                push(@outlist, $product);
+                my $oldfh = select($ofh{$cod});
+# print(${ofh{$cod}} join("\t", @outlist));
+                print(join("\t", @outlist), "\n");
+                select($oldfh);
+              }
+            }
+# Fasta output to codon derived file names.
           if(%ntout) {
             my $featobj=$feature->spliced_seq(-nosort => 1);
             $featobj->display_id($id);
@@ -238,7 +266,6 @@ for my $infile (@infiles) {
               $featobj->description("$cod at: " . join(" ", @{$codpos{$cod}}) . ". " . $product);
               $ntout{$cod}->write_seq($featobj);
             }
-
           }
           if(%protout) {
             my $aaobj = featTranslate($feature);
@@ -248,12 +275,13 @@ for my $infile (@infiles) {
               $protout{$cod}->write_seq($aaobj);
             }
           }
-        
         }
-      }
-    }
-  }
-}
+# }}}
+
+      } # if CDS  
+    } # feature
+  } # seqobj
+} # file
 # }}}
 
 exit;
@@ -261,14 +289,14 @@ exit;
 
 # {{{ Multiple END blocks run in reverse order of definition.
 END {
-  if($ofh) {
-    close($ofh);
-  }
   for my $cod (keys %ntfh) {
     close($ntfh{$cod});
   }
   for my $cod (keys %protfh) {
     close($protfh{$cod});
+  }
+  for my $cod (keys %ofh) {
+    close($ofh{$cod});
   }
 }
 

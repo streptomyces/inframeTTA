@@ -46,12 +46,12 @@ an example output.
 
  perl pretty_translate.pl sco_plasmids_codons.fna
  
- perl pretty_translate.pl -outfile sco_plasmids_codons_pretty.txt \
- sco_plasmids_codons.fna
+ perl pretty_translate.pl -outfile sco_plasmids_TTA_pretty.txt \
+ sco_plasmids_TTA.fna
  
- perl pretty_translate.pl -frame 2 sco_plasmids_codons.fna
+ perl pretty_translate.pl -frame 2 sco_plasmids_TTA.fna
  
- perl pretty_translate.pl -strand -1 -frame 2 sco_plasmids_codons.fna
+ perl pretty_translate.pl -strand -1 -frame 2 sco_plasmids_TTA.fna
 
 =head2 Options
 
