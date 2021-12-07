@@ -196,5 +196,5 @@ to work.
 
 ### Author
 
-govind.chandra@jic.ac.uk
+Govind Chandra (govind.chandra@jic.ac.uk)
 
